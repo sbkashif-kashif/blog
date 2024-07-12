@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import userRoute from '../routes/user.js'
+import authRoute from '../routes/auth.js'
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -31,6 +32,7 @@ mongoose.connect(database).then(() => {
 });
 
 const app = express();
+app.use(express.json());
 
 const port = process.env.PORT || 3030;
 
@@ -39,3 +41,14 @@ app.listen(port, () => {
 });
 
 app.use('/api/v1/', userRoute);
+app.use('/api/v1/auth', authRoute);
+
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+    const message = err.message || 'Internal Server Error';
+    res.status(statusCode).json({
+        success: false,
+        statusCode,
+        message,  
+    });
+})
