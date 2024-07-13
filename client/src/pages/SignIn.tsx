@@ -1,6 +1,9 @@
-import { Link, useNavigate } from "react-router-dom"
-import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react"
-import { useState, ChangeEvent, FormEvent } from "react"
+import { Link, useNavigate } from "react-router-dom";
+import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
+import { useState, ChangeEvent, FormEvent } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { signInStart, signInSuccess, signInFailure } from "../app/user/userSlice";
+import { RootState } from "../types/types"; 
 
 interface FormData {
   username: string;
@@ -10,61 +13,62 @@ interface FormData {
 
 const SignIn = () => {
   const [formData, setFormData] = useState<FormData>({ username: '', email: '', password: '' });
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { loading, error: errorMessage, success: successMessage } = useSelector((state: RootState) => state.user); // Use RootState
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData({...formData, [e.target.id]: e.target.value.trim()})
-  }
+    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.email || !formData.password){
-      return setErrorMessage("Please fill out all fields.")
+    if (!formData.email || !formData.password) {
+      dispatch(signInFailure("Fill in all the fields."));
+      return;
     }
-    try{
-      setLoading(true);
-      setErrorMessage(null)
+    try {
+      dispatch(signInStart());
       const response = await fetch("/api/v1/auth/signin", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       const data = await response.json();
-      if (data.success === false){
-        return setErrorMessage(data.message);
+      if (data.success === false) {
+        dispatch(signInFailure(data.message));
+        return;
       }
       if (response.ok) {
-        setSuccessMessage(data.message)
-        setLoading(false)
+        // dispatch(signInSuccess(data.message));
+        dispatch(signInSuccess(data));
         setTimeout(() => {
-          navigate("/")
-        },2000)
+          navigate("/");
+        }, 1000);
       } else {
-        setErrorMessage(data.message || "An error occurred during sign up.");
+        dispatch(signInFailure(data.message || "An error occurred during sign up."));
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        dispatch(signInFailure(error.message));
       } else {
-        setErrorMessage("An unknown error occurred.");
+        dispatch(signInFailure("An unknown error occurred."));
       }
-    } finally {
-      setLoading(false);
     }
-  }
+  };
+
   return (
-    <div className="min-h-screen mt-20">
+    <div className="mt-20">
       <div className="flex p-3 max-w-4xl mx-auto flex-col md:flex-row md:items-center gap-10">
         {/* left */}
         <div className="flex-1">
           <Link to="/" className="text-4xl font-bold dark:text-white">
             <span className="px-2 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white"> Shaik's </span>
             Blog
-        </Link>
-        <p className="text-sm mt-5">
-          This is Shaik's Blog website. you can signin with your email & password or with Google to read Shaik's project blogs.
-        </p>
+          </Link>
+          <p className="text-sm mt-5">
+            This is Shaik's Blog website. you can signin with your email & password or with Google to read Shaik's project blogs.
+          </p>
         </div>
         {/* Right */}
         <div className="flex-1">
@@ -79,10 +83,12 @@ const SignIn = () => {
             </div>
             <Button gradientDuoTone="purpleToPink" type="submit" disabled={loading}>
               {
-                loading ? (<>
-                  <Spinner size='sm' />
-                  <span className="pl-3">Loading...</span>
-                </>) : "Sign In"
+                loading ? (
+                  <>
+                    <Spinner size='sm' />
+                    <span className="pl-3">Loading...</span>
+                  </>
+                ) : "Sign In"
               }
             </Button>
           </form>
@@ -108,6 +114,6 @@ const SignIn = () => {
       </div>
     </div>
   )
-}
+};
 
-export default SignIn
+export default SignIn;
